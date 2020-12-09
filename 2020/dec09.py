@@ -1,3 +1,5 @@
+# a solution to https://adventofcode.com/2020/day/9
+
 from bisect import bisect_left
 
 def read_input():
