@@ -1,3 +1,5 @@
+# a solution to https://adventofcode.com/2020/day/10
+ 
 from collections import Counter
 
 def read_input():
