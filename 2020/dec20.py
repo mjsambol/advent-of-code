@@ -1,5 +1,4 @@
 from collections import Counter
-from copy import deepcopy
 
 class Transformation: 
 
@@ -57,16 +56,9 @@ class Transformation:
         return data
 
 class Tile:
-    TOP_FWD = 0
-    TOP_BWD = 1
-    RT_FWD = 2
-    RT_BWD = 3
-    BOT_FWD = 4
-    BOT_BWD = 5
-    LT_FWD = 6
-    LT_BWD = 7
-
-    TILE_DIRS = ((0, 1), (2, 3), (4, 5), (6, 7))
+    TOP_FWD,TOP_BWD,RT_FWD,RT_BWD,BOT_FWD,BOT_BWD,LT_FWD,LT_BWD = 0,1,2,3,4,5,6,7
+    TILE_DIRS = (TOP_FWD, TOP_BWD, RT_FWD, RT_BWD, BOT_FWD, BOT_BWD, LT_FWD, LT_BWD)
+    TILE_DIR_PAIRS = ((TOP_FWD,TOP_BWD), (RT_FWD,RT_BWD), (BOT_FWD,BOT_BWD), (LT_FWD,LT_BWD))
 
     def __init__(self, name, data):
         self.name = name
@@ -125,125 +117,74 @@ class Tile:
     # Otherwise, return False.
     def orient(self, constraints):
         
-        transform = Transformation()
-
         if self.oriented:
             return False
 
-        if constraints[0] is not None:
-            if constraints[0] == Picture.OUTSIDE:
-                if len(self.on_picture_edge) == 0:
-                    return False
-            else:
-                if constraints[0][0] not in self.fingerprints.values():
-                    return False
-                if constraints[0][0] == self.fingerprints[Tile.TOP_FWD]:
-                    # top is good, move on
-                    pass
-                elif constraints[0][0] == self.fingerprints[Tile.TOP_BWD]:
-                    transform.flip_horizontally()
-                elif constraints[0][0] == self.fingerprints[Tile.RT_FWD]:
-                    transform.rotate().rotate().rotate()
-                elif constraints[0][0] == self.fingerprints[Tile.RT_BWD]:
-                    transform.flip_horizontally().rotate()
-                elif constraints[0][0] == self.fingerprints[Tile.BOT_FWD]:
-                    transform.flip_vertically()
-                elif constraints[0][0] == self.fingerprints[Tile.BOT_BWD]:
-                    transform.rotate().rotate()
-                elif constraints[0][0] == self.fingerprints[Tile.LT_FWD]:
-                    transform.flip_vertically().rotate()
-                elif constraints[0][0] == self.fingerprints[Tile.LT_BWD]:
-                    transform.rotate()
+        top_transforms = {
+            Tile.TOP_FWD: Transformation(),
+            Tile.TOP_BWD: Transformation().flip_horizontally(),
+            Tile.RT_FWD:  Transformation().rotate().rotate().rotate(),
+            Tile.RT_BWD:  Transformation().flip_horizontally().rotate(),
+            Tile.BOT_FWD: Transformation().flip_vertically(),
+            Tile.BOT_BWD: Transformation().rotate().rotate(),
+            Tile.LT_FWD:  Transformation().flip_vertically().rotate(),
+            Tile.LT_BWD:  Transformation().rotate()
+        }
 
-        if constraints[1] is not None:
-            if constraints[1] == Picture.OUTSIDE:
-                if len(self.on_picture_edge) == 0:
-                    return False
-            else:
-                trans2 = Transformation()
+        rt_transforms = {
+            Tile.TOP_FWD: Transformation().rotate(),
+            Tile.TOP_BWD: Transformation().flip_horizontally().rotate(),
+            Tile.RT_FWD:  Transformation(),
+            Tile.RT_BWD:  Transformation().flip_vertically(),
+            Tile.BOT_FWD: Transformation().flip_vertically().rotate(),
+            Tile.BOT_BWD: Transformation().rotate().rotate().rotate(),
+            Tile.LT_FWD:  Transformation().flip_horizontally(),
+            Tile.LT_BWD:  Transformation().rotate().rotate()
+        }
 
-                if constraints[1][0] not in self.fingerprints.values():
-                    return False
-                if constraints[1][0] == self.fingerprints[Tile.RT_FWD]:
-                    pass
-                elif constraints[1][0] == self.fingerprints[Tile.RT_BWD]:
-                    trans2.flip_vertically()
-                elif constraints[1][0] == self.fingerprints[Tile.BOT_FWD]:
-                    trans2.flip_vertically().rotate()
-                elif constraints[1][0] == self.fingerprints[Tile.BOT_BWD]:
-                    trans2.rotate().rotate().rotate()
-                elif constraints[1][0] == self.fingerprints[Tile.LT_FWD]:
-                    trans2.flip_horizontally()
-                elif constraints[1][0] == self.fingerprints[Tile.LT_BWD]:
-                    trans2.rotate().rotate()
-                elif constraints[1][0] == self.fingerprints[Tile.TOP_FWD]:
-                    trans2.rotate()
-                elif constraints[1][0] == self.fingerprints[Tile.TOP_BWD]:
-                    trans2.flip_horizontally().rotate()
+        bot_transforms = {
+            Tile.TOP_FWD: Transformation().flip_vertically(),
+            Tile.TOP_BWD: Transformation().flip_horizontally(),
+            Tile.RT_FWD:  Transformation().flip_vertically().rotate(),
+            Tile.RT_BWD:  Transformation().rotate(),
+            Tile.BOT_FWD: Transformation(),
+            Tile.BOT_BWD: Transformation().rotate().rotate().rotate(),
+            Tile.LT_FWD:  Transformation().rotate().rotate(),
+            Tile.LT_BWD:  Transformation().flip_horizontally().rotate()
+        }
 
-                if not transform.make_compatible_with(trans2):
-                    print("Constraints violated, returning false")
-                    return False
+        lt_transforms = {
+            Tile.TOP_FWD: Transformation().flip_vertically().rotate(),
+            Tile.TOP_BWD: Transformation().rotate().rotate().rotate(),
+            Tile.RT_FWD:  Transformation().flip_horizontally(),
+            Tile.RT_BWD:  Transformation().rotate().rotate(),
+            Tile.BOT_FWD: Transformation().rotate(),
+            Tile.BOT_BWD: Transformation().flip_horizontally().rotate(),
+            Tile.LT_FWD:  Transformation(),
+            Tile.LT_BWD:  Transformation().flip_vertically()
+        }
 
-        if constraints[2] is not None:
-            if constraints[2] == Picture.OUTSIDE:
-                if len(self.on_picture_edge) == 0:
-                    return False
-            else:
-                trans2 = Transformation()
+        transformers = (top_transforms, rt_transforms, bot_transforms, lt_transforms)
 
-                if constraints[2][0] not in self.fingerprints.values():
-                    return False
-                if constraints[2][0] == self.fingerprints[Tile.BOT_FWD]:
-                    pass
-                elif constraints[2][0] == self.fingerprints[Tile.BOT_BWD]:
-                    trans2.flip_horizontally()
-                elif constraints[2][0] == self.fingerprints[Tile.LT_FWD]:
-                    trans2.rotate().rotate().rotate()
-                elif constraints[2][0] == self.fingerprints[Tile.LT_BWD]:
-                    trans2.flip_horizontally().rotate()
-                elif constraints[2][0] == self.fingerprints[Tile.TOP_FWD]:
-                    trans2.flip_vertically()
-                elif constraints[2][0] == self.fingerprints[Tile.TOP_BWD]:
-                    trans2.rotate().rotate()
-                elif constraints[2][0] == self.fingerprints[Tile.RT_FWD]:
-                    trans2.flip_vertically().rotate()
-                elif constraints[2][0] == self.fingerprints[Tile.RT_BWD]:
-                    trans2.rotate()
+        transform = Transformation()
+        
+        for direc in range(4):
 
-                if not transform.make_compatible_with(trans2):
-                    print("Constraints violated, returning false")
-                    return False
-
-        if constraints[3] is not None:
-            if constraints[3] == Picture.OUTSIDE:
-                if len(self.on_picture_edge) == 0:
-                    return False
-            else:
-                trans2 = Transformation()
-
-                if constraints[3][0] not in self.fingerprints.values():
-                    return False
-                if constraints[3][0] == self.fingerprints[Tile.LT_FWD]:
-                    pass
-                elif constraints[3][0] == self.fingerprints[Tile.LT_BWD]:
-                    trans2.flip_vertically()
-                elif constraints[3][0] == self.fingerprints[Tile.TOP_FWD]:
-                    trans2.flip_vertically().rotate()
-                elif constraints[3][0] == self.fingerprints[Tile.TOP_BWD]:
-                    trans2.rotate().rotate().rotate()
-                elif constraints[3][0] == self.fingerprints[Tile.RT_FWD]:
-                    trans2.flip_horizontally()
-                elif constraints[3][0] == self.fingerprints[Tile.RT_BWD]:
-                    trans2.rotate().rotate()
-                elif constraints[3][0] == self.fingerprints[Tile.BOT_FWD]:
-                    trans2.rotate()
-                elif constraints[3][0] == self.fingerprints[Tile.BOT_BWD]:
-                    trans2.flip_horizontally().rotate()
-
-                if not transform.make_compatible_with(trans2):
-                    print("Constraints violated, returning false")
-                    return False
+            if constraints[direc] is not None:
+                if constraints[direc] == Picture.OUTSIDE:
+                    if len(self.on_picture_edge) == 0:
+                        return False
+                else:
+                    if constraints[direc][0] not in self.fingerprints.values():
+                        return False
+                    
+                    for d in Tile.TILE_DIRS:
+                        if constraints[direc][0] == self.fingerprints[d]:
+                            section_transform = transformers[direc][d]
+                            if not transform.make_compatible_with(section_transform):
+                                print("Constraints violated, returning false")
+                                return False
+                            break
 
         if transform.needed():
             self.do_orientation(transform)
@@ -251,7 +192,7 @@ class Tile:
         return True        
 
     def unmatched_edge(self):
-        for f,b in Tile.TILE_DIRS:
+        for f,b in Tile.TILE_DIR_PAIRS:
             edge = (self.fingerprints[f],self.fingerprints[b])
             if min(edge) not in self.edge_matches and max(edge) not in self.edge_matches and (min(edge),max(edge)) not in self.edge_matches:
                 return edge
@@ -268,7 +209,7 @@ class Tile:
         if other_tile in self.edge_matches.values():
             return True
         
-        for side in Tile.TILE_DIRS:
+        for side in Tile.TILE_DIR_PAIRS:
             if self.fingerprints[side[0]] in other_tile.fingerprints.values():
                 ordered_edge = (min(self.fingerprints[side[0]], self.fingerprints[side[1]]), max(self.fingerprints[side[0]], self.fingerprints[side[1]]))
                 self.edge_matches[ordered_edge] = other_tile
@@ -280,9 +221,9 @@ class Tile:
     # return the pair of fingerprints which represent the edge of the tile 
     # which is opposite the one passed as edge_pair param
     def opposite(self, edge_pair):
-        for index, direc in enumerate(Tile.TILE_DIRS):
+        for index, direc in enumerate(Tile.TILE_DIR_PAIRS):
             if self.fingerprints[direc[0]] in edge_pair or self.fingerprints[direc[1]] in edge_pair:
-                opposite_dir = Tile.TILE_DIRS[(index + 2) % 4]
+                opposite_dir = Tile.TILE_DIR_PAIRS[(index + 2) % 4]
                 return (self.fingerprints[opposite_dir[0]], self.fingerprints[opposite_dir[1]])
 
 
@@ -320,9 +261,6 @@ class Picture:
                 if tile not in self.edge_tiles:
                     self.edge_tiles.append(tile)
 
-        # saving this purely for debugging later
-        self.all_fingerprints = all_fingerprints
-
         for tile in self.edge_tiles:
             # if tile has two edges on edge of the Picture, it's a corner
             if tile.is_corner() and tile not in self.corner_tiles:
@@ -354,21 +292,6 @@ class Picture:
                     being_matched = e
                     break
 
-        # right edge
-        being_matched = self.pic[0][-1]
-        edge_to_match = being_matched.unmatched_edge()  # there's only one left!
-        constraints = [edge_to_match, Picture.OUTSIDE, None, None]
-        
-        for i in range(1,self.dim):
-            for e in self.edge_tiles:
-                if e.orient(constraints):
-                    being_matched.matches(e)
-                    self.pic[i][-1] = e
-                    self.edge_tiles.remove(e)
-                    constraints[0] = e.opposite(constraints[0])
-                    being_matched = e
-                    break
-
         # left edge
         being_matched = self.pic[0][0]
         edge_to_match = being_matched.unmatched_edge()  # there's only one left!
@@ -384,28 +307,12 @@ class Picture:
                     being_matched = e
                     break
 
-        # bottom
-        being_matched = self.pic[-1][0]
-        edge_to_match = being_matched.unmatched_edge()  # there's only one left!
-        constraints = [None, None, Picture.OUTSIDE, edge_to_match]
-        
-        for i in range(1,self.dim-1):
-            for e in self.edge_tiles:
-                if e.orient(constraints):
-                    being_matched.matches(e)
-                    self.pic[-1][i] = e
-                    self.edge_tiles.remove(e)
-                    constraints[3] = e.opposite(constraints[3])
-                    being_matched = e
-                    break
-
-
     def fill_frame(self):
-        for row in range(1,self.dim-1):
+        for row in range(1,self.dim):
             tile_to_left = self.pic[row][0]
             left_edge_to_match = tile_to_left.unmatched_edge()  # there's only one left!
 
-            for col in range(1,self.dim-1):
+            for col in range(1,self.dim):
                 tile_above = self.pic[row-1][col]
                 top_edge_to_match = tile_above.unmatched_edge()  # there's only one left!
                 constraints = [top_edge_to_match, None, None, left_edge_to_match]
@@ -413,15 +320,12 @@ class Picture:
                     if t.orient(constraints):
                         t.matches(tile_above)
                         t.matches(tile_to_left)
-                        if col == self.dim-2:  # don't forget to link with the right-most edge
-                            t.matches(self.pic[row][col+1])
                         self.pic[row][col] = t
                         left_edge_to_match = t.opposite(left_edge_to_match)
                         tile_to_left = t
                         break
                 if self.pic[row][col] is None:
-                    print(f"Uh oh, no match found for {row},{col}")
-            
+                    print(f"Uh oh, no match found for {row},{col}")            
 
         print("All done making the picture!")
 
@@ -432,8 +336,7 @@ class Picture:
 
         self.trimmed_pic = [[None for i in range(new_row_len)] for j in range(new_row_len)]
 
-        new_pic_row = 0
-        new_pic_col = 0
+        new_pic_row, new_pic_col = 0, 0
         ctr = Counter()
 
         for orig_pic_row in range(self.dim * tile_width):
@@ -462,6 +365,15 @@ class Picture:
         self.num_tot_waves = ctr['#']
         print(f"Total # waves: {self.num_tot_waves}")
 
+    def is_snake_at(self, sea, row, col):
+        for spot in [0,5,6,11,12,17,18,19]:
+            if sea[row][col + spot] != '#':
+                return False
+        for leg in [1,4,7,10,13,16]:
+            if sea[row+1][col + leg] != '#':
+                return False
+        return sea[row-1][col + 18] == '#'        
+
     def seek_snakes(self):
         # for each transformation of: reg, r1, r2, r3, H, V, Vr1, Hr1:
         transformations = [
@@ -477,27 +389,15 @@ class Picture:
             num_snakes = 0
             for row in range(1,len(sea)-1):
                 for col in range(len(sea)-19):
-                    fail = False
-                    for spot in [0,5,6,11,12,17,18,19]:
-                        if sea[row][col + spot] != '#':
-                            fail = True
-                            break
-                    if fail:
-                        continue
-                    for leg in [1,4,7,10,13,16]:
-                        if sea[row+1][col + leg] != '#':
-                            fail = True
-                            break
-                    if fail:
-                        continue
-                    if sea[row-1][col + 18] == '#':
+                    if self.is_snake_at(sea, row, col):
                         print(f"Found a snake at {row},{col}")
                         num_snakes += 1
+
             print(f"Total snakes in this orientation: {num_snakes}")
             if num_snakes > 0:
                 print(f"Total non-snake waves: {self.num_tot_waves - num_snakes * 15}")
 
-with open("/home/msambol/git/adventofcode/2020/dec20in.txt") as in_file:
+with open("/home/moshe/git/adventofcode/2020/dec20in.txt") as in_file:
     curr_tile = 0
     data_buffer = []
     all_tiles = dict()
@@ -517,7 +417,6 @@ with open("/home/msambol/git/adventofcode/2020/dec20in.txt") as in_file:
 
     t = Tile(curr_tile, data_buffer)
     all_tiles[t.name] = t
-
 
 
 pic = Picture(all_tiles)
