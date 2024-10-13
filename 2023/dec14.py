@@ -4,10 +4,13 @@ with open("dec14in.txt") as puzzle_file:
 rotate = lambda grid: [[row[c] for row in grid] for c in range(len(grid[0]))]
 
 def shift(col, rev=False):
+    # new_col = []
+    # for chunk in ''.join(col).split('#'):
+    #     new_col.extend(sorted(chunk, reverse=rev))
+    #     new_col.extend('#')
+    # new_col.pop()
     new_col = []
-    for chunk in ''.join(col).split('#'):
-        new_col.extend(sorted(chunk, reverse=rev))
-        new_col.extend('#')
+    [new_col.extend(x) for x in [sorted(chunk, reverse=rev) + ['#'] for chunk in ''.join(col).split('#')]]
     new_col.pop()
     return new_col
 
