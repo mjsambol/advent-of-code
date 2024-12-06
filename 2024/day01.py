@@ -1,0 +1,2 @@
+from collections import Counter
+print((sum([[abs(pairs[0][i] - pairs[1][i]) for i in (range(len(pairs[0])))] for pairs in ([sorted([int(i) for i in list(zip(*[l.strip().split('   ') for l in open("day01.in").readlines()]))[list_num]]) for list_num in (0, 1)],)][0])), ([sum([(int(pairs[0][i]) * Counter(pairs[1])[pairs[0][i]]) for i in (range(len(pairs[0])))]) for pairs in (list(zip(*[l.strip().split('   ') for l in open("day01.in").readlines()])),)][0]))
