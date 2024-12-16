@@ -1,3 +1,4 @@
+import copy
 import re
 
 robots = []
@@ -25,6 +26,7 @@ with open("dec14.in") as infile:
         p, v = line.strip().split(' ')
         robots.append(([int(i) for i in p.split('=')[1].split(',')], [int(i) for i in v.split('=')[1].split(',')]))
 
+    orig_robots = copy.deepcopy(robots)
     for rob in robots:
         rob[0][0] = (rob[0][0] + 100 * rob[1][0]) % board_dim[0]
         rob[0][1] = (rob[0][1] + 100 * rob[1][1]) % board_dim[1]
@@ -38,7 +40,9 @@ with open("dec14.in") as infile:
     quadrant_4 = sum([sum([0 if c == '.' else int(c) for row in board[mid_row+1:] for c in row[mid_col+1:]])])
     print(quadrant_1 * quadrant_2 * quadrant_3 * quadrant_4)
 
-    for i in range(10000):
+    robots = orig_robots
+
+    for i in range(1,10000):
         for rob in robots:
             rob[0][0] = (rob[0][0] + rob[1][0]) % board_dim[0]
             rob[0][1] = (rob[0][1] + rob[1][1]) % board_dim[1]
